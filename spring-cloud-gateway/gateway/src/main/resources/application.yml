@@ -1,0 +1,67 @@
+server:
+  port: 8764
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: nameRoot
+          uri: lb://eureka-client
+          predicates:
+            - Path=/name/**
+          filters:
+            - StripPrefix=2
+        - id: producer_route
+          #       uri: http://localhost:9000
+          uri: lb://producer
+          filters:
+            - StripPrefix=2
+          predicates:
+            - Path=/test/**
+        - id: hystrix_route
+          uri: lb://producer
+          predicates:
+            - Path=/consumingserviceendpoint
+          filters:
+            - name: Hystrix
+              args:
+                name: fallbackcmd
+                fallbackUri: forward:/incaseoffailureusethis
+        - id: retry_test
+          uri: lb://producer
+          predicates:
+            - Path=/retry
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: ALWAYS
+
+
+
+
+
+
+logging:
+  level:
+    org.springframework.cloud.gateway: debug
